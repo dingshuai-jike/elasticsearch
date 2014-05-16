@@ -91,6 +91,7 @@ import org.elasticsearch.indices.store.IndicesStore;
 import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.search.SearchService;
 import org.elasticsearch.test.client.RandomizingClient;
+import org.elasticsearch.test.disruption.ServiceDisruptionScheme;
 import org.junit.*;
 
 import java.io.IOException;
@@ -518,6 +519,7 @@ public abstract class ElasticsearchIntegrationTest extends ElasticsearchTestCase
         boolean success = false;
         try {
             logger.info("[{}#{}]: cleaning up after test", getTestClass().getSimpleName(), getTestName());
+            clearDisruptionScheme();
             final Scope currentClusterScope = getCurrentClusterScope();
             try {
                 if (currentClusterScope != Scope.TEST) {
@@ -629,6 +631,15 @@ public abstract class ElasticsearchIntegrationTest extends ElasticsearchTestCase
 
     protected int numberOfReplicas() {
         return between(minimumNumberOfReplicas(), maximumNumberOfReplicas());
+    }
+
+
+    public void setDisruptionScheme(ServiceDisruptionScheme scheme) {
+        internalCluster().setDisruptionScheme(scheme);
+    }
+
+    public void clearDisruptionScheme() {
+        internalCluster().clearDisruptionScheme();
     }
 
     /**
