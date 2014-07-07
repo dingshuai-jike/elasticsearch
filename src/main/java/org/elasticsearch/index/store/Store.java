@@ -477,7 +477,7 @@ public class Store extends AbstractIndexShardComponent implements CloseableIndex
                 try {
                     if (in.length() < CodecUtil.footerLength()) {
                         // truncated files trigger IAE if we seek negative... these files are really corrupted though
-                        throw new CorruptIndexException("Can't retrieve checksum from file: " + file + " file length must be >= " + CodecUtil.footerLength());
+                        throw new CorruptIndexException("Can't retrieve checksum from file: " + file + " file length must be >= " + CodecUtil.footerLength() + " but was: " + in.length());
                     }
                     String checksum = digestToString(CodecUtil.retrieveChecksum(in));
                     builder.put(file, new StoreFileMetaData(file, directory.fileLength(file), checksum, version));
