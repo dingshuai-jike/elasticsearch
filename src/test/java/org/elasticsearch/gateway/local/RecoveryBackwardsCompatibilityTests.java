@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.elasticsearch.bwcompat;
+package org.elasticsearch.gateway.local;
 
 import org.apache.lucene.util.LuceneTestCase;
 import org.elasticsearch.Version;
