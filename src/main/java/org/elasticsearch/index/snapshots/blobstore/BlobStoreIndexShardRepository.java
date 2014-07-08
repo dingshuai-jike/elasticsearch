@@ -843,8 +843,9 @@ public class BlobStoreIndexShardRepository extends AbstractComponent implements 
                     @Override
                     public void onFailure(Throwable t) {
                         try {
-                            IOUtils.closeWhileHandlingException(indexOutput);
                             failures.add(t);
+                            IOUtils.closeWhileHandlingException(indexOutput);
+                            store.deleteQuiet(fileInfo.physicalName());
                         } finally {
                             latch.countDown();
                         }
@@ -853,8 +854,13 @@ public class BlobStoreIndexShardRepository extends AbstractComponent implements 
                 success = true;
             } finally {
                 if (!success) {
-                    IOUtils.closeWhileHandlingException(indexOutput);
-                    latch.countDown();
+                    try {
+                        IOUtils.closeWhileHandlingException(indexOutput);
+                        store.deleteQuiet(fileInfo.physicalName());
+                    } finally {
+                        latch.countDown();
+                    }
+
                 }
             }
 

@@ -431,13 +431,6 @@ public class SharedClusterSnapshotRestoreTests extends AbstractSnapshotTests {
     }
 
     @Test
-    @LuceneTestCase.AwaitsFix(bugUrl = "simon is working on this")
-    // this fails with:
-    /*
-          mvn test -Dtests.seed=1FA685DD28B7F3B5 -Dtests.class=org.elasticsearch.snapshots.SharedClusterSnapshotRestoreTests -Dtests.prefix=tests -Dfile.encoding=UTF-8 -Duser.timezone=Europe/Berlin -Dtests.method="dataFileFailureDuringRestoreTest" -Des.logger.level=INFO -Dtests.heap.size=1g -Dtests.bwc.path=/media/benchmark/elasticsearch/backwards -Dtests.processors=12
-          with this new feature we don't allow reallocation on a node unless the data is wiped manually or the corrupted file is removed
-          here we need to make sure that there si another node available to fit all the shards ie. 1 more node than shards
-     */
     public void dataFileFailureDuringRestoreTest() throws Exception {
         File repositoryLocation = newTempDir(LifecycleScope.TEST);
         Client client = client();

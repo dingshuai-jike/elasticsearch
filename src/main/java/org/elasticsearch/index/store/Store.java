@@ -392,7 +392,14 @@ public class Store extends AbstractIndexShardComponent implements CloseableIndex
             ImmutableMap.Builder<String, StoreFileMetaData> builder = ImmutableMap.builder();
             Map<String, String> checksumMap = readLegacyChecksums(directory);
             try {
-                SegmentInfos segmentCommitInfos = Lucene.readSegmentInfos(directory);
+                final SegmentInfos segmentCommitInfos;
+                try {
+                     segmentCommitInfos = Lucene.readSegmentInfos(directory);
+                } catch (FileNotFoundException | NoSuchFileException ex) {
+                    // no segments file -- can't read metadata
+                    logger.debug("Can't read segment infos", ex);
+                    return ImmutableMap.of();
+                }
                 Version maxVersion = Version.LUCENE_3_0; // we don't know which version was used to write so we take the max version.
                 Set<String> added = new HashSet<>();
                 for (SegmentCommitInfo info : segmentCommitInfos) {
@@ -404,9 +411,7 @@ public class Store extends AbstractIndexShardComponent implements CloseableIndex
                         if (!added.contains(file)) {
                             String legacyChecksum = checksumMap.get(file);
                             if (version.onOrAfter(Version.LUCENE_4_8) && legacyChecksum == null) {
-                                if (!checksumFromLuceneFile(directory, file, builder, logger, version)) {
-                                    builder.put(file, new StoreFileMetaData(file, directory.fileLength(file)));
-                                }
+                                checksumFromLuceneFile(directory, file, builder, logger, version);
                             } else {
                                 builder.put(file, new StoreFileMetaData(file, directory.fileLength(file), legacyChecksum, null));
                             }
@@ -416,22 +421,28 @@ public class Store extends AbstractIndexShardComponent implements CloseableIndex
                 }
                 for (String file : Arrays.asList(segmentCommitInfos.getSegmentsFileName(), IndexFileNames.SEGMENTS_GEN)) {
                     if (!added.contains(file)) {
-                        String legacyChecksum = checksumMap.get(file);
-                        if (maxVersion.onOrAfter(Version.LUCENE_4_8) && legacyChecksum == null) {
-                            if (!checksumFromLuceneFile(directory, file, builder, logger, maxVersion)) {
-                                builder.put(file, new StoreFileMetaData(file, directory.fileLength(file)));
+                        try {
+                            String legacyChecksum = checksumMap.get(file);
+                            if (maxVersion.onOrAfter(Version.LUCENE_4_8) && legacyChecksum == null) {
+                                checksumFromLuceneFile(directory, file, builder, logger, maxVersion);
+                            } else {
+                                builder.put(file, new StoreFileMetaData(file, directory.fileLength(file), legacyChecksum, null));
                             }
-                        } else {
-                            builder.put(file, new StoreFileMetaData(file, directory.fileLength(file), legacyChecksum, null));
+                            added.add(file);
+                        } catch (FileNotFoundException | NoSuchFileException ex) {
+                            if (IndexFileNames.SEGMENTS_GEN.equals(file) == false) {
+                                // segments.gen is optional
+                                throw ex;
+                            }
                         }
-                        added.add(file);
                     }
                 }
             } catch (CorruptIndexException ex) {
                 throw ex;
-            } catch (IOException ex) {
+            } catch (FileNotFoundException | NoSuchFileException ex) {
                 // can't open index | no commit present -- we might open a snapshot index that is not fully restored?
-                logger.trace("Can't open index to read checksums", ex);
+                logger.warn("Can't open file to read checksums", ex);
+                return ImmutableMap.of();
             } catch (Throwable ex) {
                 try {
                     // Lucene checks the checksum after it tries to lookup the codec etc.
@@ -472,7 +483,7 @@ public class Store extends AbstractIndexShardComponent implements CloseableIndex
             }
         }
 
-        private static boolean checksumFromLuceneFile(Directory directory, String file, ImmutableMap.Builder<String, StoreFileMetaData> builder,  ESLogger logger, Version version) throws IOException {
+        private static void checksumFromLuceneFile(Directory directory, String file, ImmutableMap.Builder<String, StoreFileMetaData> builder,  ESLogger logger, Version version) throws IOException {
             try (IndexInput in = directory.openInput(file, IOContext.READONCE)) {
                 try {
                     if (in.length() < CodecUtil.footerLength()) {
@@ -481,7 +492,6 @@ public class Store extends AbstractIndexShardComponent implements CloseableIndex
                     }
                     String checksum = digestToString(CodecUtil.retrieveChecksum(in));
                     builder.put(file, new StoreFileMetaData(file, directory.fileLength(file), checksum, version));
-                    return true;
                 } catch (Throwable ex) {
                     logger.debug("Can retrieve checksum from file [{}]", ex, file);
                     throw ex;
