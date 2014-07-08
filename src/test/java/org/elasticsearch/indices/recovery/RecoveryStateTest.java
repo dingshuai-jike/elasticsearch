@@ -36,5 +36,25 @@ public class RecoveryStateTest extends ElasticsearchTestCase {
         index.reusedFileCount(80);
         index.recoveredFileCount(20);
         assertThat((double)index.percentFilesRecovered(), closeTo(20.0d, 0.1d));
+
+        index.totalByteCount(0);
+        index.reusedByteCount(0);
+        index.recoveredByteCount(0);
+        assertThat((double)index.percentBytesRecovered(), closeTo(0d, 0.1d));
+
+        index.totalFileCount(0);
+        index.reusedFileCount(0);
+        index.recoveredFileCount(0);
+        assertThat((double)index.percentFilesRecovered(), closeTo(00.0d, 0.1d));
+
+        index.totalByteCount(10);
+        index.reusedByteCount(0);
+        index.recoveredByteCount(10);
+        assertThat((double)index.percentBytesRecovered(), closeTo(100d, 0.1d));
+
+        index.totalFileCount(20);
+        index.reusedFileCount(0);
+        index.recoveredFileCount(20);
+        assertThat((double)index.percentFilesRecovered(), closeTo(100.0d, 0.1d));
     }
 }
