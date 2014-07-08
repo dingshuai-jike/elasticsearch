@@ -1031,8 +1031,10 @@ public abstract class ElasticsearchIntegrationTest extends ElasticsearchTestCase
     }
 
     void ensureClusterSizeConsistency() {
-        logger.trace("Check consistency for [{}] nodes", cluster().size());
-        assertNoTimeout(client().admin().cluster().prepareHealth().setWaitForNodes(Integer.toString(cluster().size())).get());
+        if (cluster() != null) { // if static init fails the cluster can be null
+            logger.trace("Check consistency for [{}] nodes", cluster().size());
+            assertNoTimeout(client().admin().cluster().prepareHealth().setWaitForNodes(Integer.toString(cluster().size())).get());
+        }
     }
 
     /**
